@@ -8,18 +8,20 @@ import ConfigStore from "configstore";
 import { Command, program } from "commander";
 import path from "path";
 let config = new ConfigStore();
+let version = "1.0.0";
 program
   .name("oirepo")
   .aliases(["orp", "oirp", "oirep"])
   .description(
-    "Simple tool for OIer to save C++ source file into repo and replace current file with template source file."
+    "Simple tool for OIer to save C++ source file into repo and replace current file with template source file.\n一个帮助OIer归档和清理垃圾代码的蒟蒻小工具..."
   )
-  .version("0.0.1");
+  .version(version);
 program.addHelpCommand("help [command]", "输出使用帮助");
 function printHeadline() {
   clear();
   return (
-    chalk.redBright(figlet.textSync("OIREPO", "Graffiti")) +
+    chalk.redBright(figlet.textSync("OI REPO", "Speed")) +
+    chalk.gray(version) +
     chalk.italic(
       chalk.gray("\nPowered by ") + chalk.yellowBright("@CuberQAQ")
     ) +
@@ -75,10 +77,18 @@ program
     status.start();
     let prog = new Clui.Progress(20);
     let i = 0.1;
-    setInterval(
-      () => status.message("Please Wait...     " + prog.update((i += 0.01))),
-      800
-    );
+    status.message("Geting Latest Package...");
+    setTimeout(() => {
+      let s = setInterval(() => {
+        i += 0.1;
+        if (i >= 1)
+          status.message(
+            '其实只要"npm update oirepo"就可以了...更新功能还没做'
+          );
+        else status.message("Updating...     " + prog.update(i));
+        if (i >= 3) s.unref();
+      }, 800);
+    }, 1000);
     // setTimeout(() => status.stop(), 5000);
   });
 program
