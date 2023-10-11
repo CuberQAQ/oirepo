@@ -20,6 +20,5 @@ oirepo需要配置一个repo（源文件仓库）文件夹，来存放写好的�
 - 从github获取源码包
   - 从github下载源码包并解压，或直接使用命令`git clone https://github.com/CuberQAQ/oirepo.git`(先确保安装了git)
   - 在源码目录下执行`npm i -g`，将oirepo全局安装至本地，npm会自动下载所有依赖包
-### 3. 配置oirepo
-#### 1. repoLocation配置
-  
+### 3. 配置oirepo及更多
+  使用 `oirepo help`和`oirepo help <子命令>`来获取帮助...
