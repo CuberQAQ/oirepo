@@ -1,6 +1,6 @@
 {
   "name": "oirepo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simple tool for OIer to save C++ source file into repo and replace current file with template source file.",
   "main": "./bin/index.js",
   "scripts": {

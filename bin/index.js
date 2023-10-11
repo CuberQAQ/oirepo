@@ -8,7 +8,7 @@ import ConfigStore from "configstore";
 import { Command, program } from "commander";
 import path from "path";
 let config = new ConfigStore();
-let version = "1.0.0";
+let version = "1.0.1";
 program
   .name("oirepo")
   .aliases(["orp", "oirp", "oirep"])
