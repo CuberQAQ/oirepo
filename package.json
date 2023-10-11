@@ -1,0 +1,37 @@
+{
+  "name": "oirepo",
+  "version": "1.0.0",
+  "description": "Simple tool for OIer to save C++ source file into repo and replace current file with template source file.",
+  "main": "./bin/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/CuberQAQ/oirep"
+  },
+  "keywords": [
+    "OI"
+  ],
+  "bin": {
+    "oirepo": "./bin/index.js",
+    "oirep": "./bin/index.js",
+    "oirp": "./bin/index.js",
+    "orp": "./bin/index.js"
+  },
+  "author": "CuberQAQ",
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "clear": "^0.1.0",
+    "clui": "^0.3.6",
+    "commander": "^11.0.0",
+    "configstore": "^6.0.0",
+    "figlet": "^1.6.0",
+    "inquirer": "^9.2.11",
+    "lodash": "^4.17.21",
+    "minimist": "^1.2.8",
+    "touch": "^3.1.0"
+  }
+}
