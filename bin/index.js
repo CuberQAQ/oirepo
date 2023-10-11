@@ -44,6 +44,7 @@ program
 
 program
   .command("clear")
+  .alias("c")
   .description("清空当前源文件并载入模板")
   .argument("[template]", "指定特定模板文件名")
   .option("-b, --blank", "直接载入空白文件")
