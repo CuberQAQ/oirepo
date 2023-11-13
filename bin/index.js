@@ -2,13 +2,15 @@
 import chalk from "chalk";
 import clear from "clear";
 import figlet from "figlet";
+import util from "util";
 import Clui from "clui";
-import fs, { writeFileSync } from "fs";
+import fs, { rmSync, writeFileSync } from "fs";
 import ConfigStore from "configstore";
 import { Command, program } from "commander";
 import path from "path";
+import child_process from "child_process";
 let config = new ConfigStore();
-let version = "1.0.1";
+let version = "1.0.2";
 program
   .name("oirepo")
   .aliases(["orp", "oirp", "oirep"])
@@ -92,6 +94,34 @@ program
     }, 1000);
     // setTimeout(() => status.stop(), 5000);
   });
+
+program
+  .command("run")
+  .argument("[executable]", "可执行程序(可通过--executable-default配置默认值)")
+  .description("运行程序，提供一次性输入、stdio流重定向和计时功能")
+  .alias("r")
+  .option("-c,--compile [sourcefile]", "运行前编译源代码")
+  .option("-f,--force", "忽略编译错误并继续运行程序")
+  .option("-i,--input <filename>", "从文件中读取并通过stdin输入")
+  .option("-o,--output <filename>", "将程序stdout输出存入指定文件")
+  .option("--no-timing", "不计时运行并关闭模拟流或文件输入")
+  .action((excutable, opts) => {
+    if (opts.compile) compileTask(opts.compile);
+  });
+
+program
+  .command("test")
+  .argument("[target]", "待检测可执行程序")
+  .description("对拍操作")
+  .alias("t")
+  .option("-s --standard <executable>", "标准程序")
+  .option("-g --generator <executable>", "输入数据生成程序")
+  .option("-l --left <number>", "第一个检查点编号")
+  .option("-r --right <number>", "最后一个检查点编号")
+  .action((target, opts) => {
+    clapTask(target, opts);
+  });
+
 program
   .command("config")
   .description("配置oirepo")
@@ -101,6 +131,9 @@ program
   .option("-s,--sourcefile [filename]", "未指定时的源文件名(含扩展名)")
   .option("-t,--template-location [location]", "模板文件的路径")
   .option("-d,--template-default [location]", "未指定时的模板文件(含扩展名)")
+  .option("--default-target [executable]", "对拍功能默认待检测程序")
+  .option("--default-standard [executable]", "对拍功能默认标准程序")
+  .option("--default-generator [executable]", "对拍功能默认生成器程序")
   .action((opts) => {
     // console.log(opts);
     if (opts.reset) {
@@ -126,6 +159,27 @@ program
         setConfig("sourcefile");
       } else {
         setConfig("sourcefile", opts.sourcefile);
+      }
+    }
+    if (opts.defaultTarget) {
+      if (typeof opts.defaultTarget == "boolean") {
+        setConfig("defaultTarget");
+      } else {
+        setConfig("defaultTarget", opts.defaultTarget);
+      }
+    }
+    if (opts.defaultStandard) {
+      if (typeof opts.defaultStandard == "boolean") {
+        setConfig("defaultStandard");
+      } else {
+        setConfig("defaultStandard", opts.defaultStandard);
+      }
+    }
+    if (opts.defaultGenerator) {
+      if (typeof opts.defaultGenerator == "boolean") {
+        setConfig("defaultGenerator");
+      } else {
+        setConfig("defaultGenerator", opts.defaultGenerator);
       }
     }
     if (opts.templateLocation) {
@@ -237,6 +291,32 @@ function copyIntoRepoTask(saveName, opts) {
     force: opts.force,
   });
 }
+function compileTask(sourcefile, opts) {
+  let src = "";
+  if (sourcefile) {
+    if (!fs.existsSync(sourcefile))
+      program.error(
+        chalk.dim.bgRed("ERROR") + " sourcefile 指定的源文件不存在"
+      );
+    if (fs.statSync(sourcefile).isDirectory())
+      program.error(
+        chalk.dim.bgRed("ERROR") + " sourcefile 指定的源文件是目录而不是文件"
+      );
+    src = sourcefile;
+  } else {
+    src = getConfig("sourcefile", true, "--sourcefile=<filename>");
+    if (!fs.existsSync(src))
+      program.error(
+        chalk.dim.bgRed("ERROR") + " 配置 sourcefile 指定的源文件不存在:" + src
+      );
+    if (fs.statSync(src).isDirectory())
+      program.error(
+        chalk.dim.bgRed("ERROR") +
+          " sourcefile 指定的源文件是目录而不是文件:" +
+          src
+      );
+  }
+}
 function loadTemplateTask(template, opts) {
   // console.log(opts);
   // source
@@ -327,6 +407,150 @@ function loadTemplateTask(template, opts) {
     console.log(
       chalk.dim.bgBlueBright("CLEAR") + " " + templateFilename + " > " + src
     );
+  }
+}
+function clapTask(target, opts) {
+  if (target) {
+    if (!fs.existsSync(target))
+      program.error(chalk.dim.bgRed("ERROR") + " 指定的 target 不存在");
+    if (fs.statSync(target).isDirectory())
+      program.error(
+        chalk.dim.bgRed("ERROR") + " 指定的 target 是目录而不是文件"
+      );
+  } else {
+    target = getConfig("defaultTarget", true, "--default-target=<executable>");
+    if (!fs.existsSync(target))
+      program.error(chalk.dim.bgRed("ERROR") + " 指定的 defaultTarget 不存在");
+    if (fs.statSync(target).isDirectory())
+      program.error(
+        chalk.dim.bgRed("ERROR") + " defaultTarget 为目录而不是文件:" + target
+      );
+  }
+
+  let stdExe = "";
+  if (opts.standard) {
+    if (!fs.existsSync(opts.standard))
+      program.error(chalk.dim.bgRed("ERROR") + " 指定的 standard 不存在");
+    if (fs.statSync(opts.standard).isDirectory())
+      program.error(
+        chalk.dim.bgRed("ERROR") + " 指定的 standard 是目录而不是文件"
+      );
+    stdExe = opts.standard;
+  } else {
+    stdExe = getConfig(
+      "defaultStandard",
+      true,
+      "--default-standard=<executable>"
+    );
+    if (!fs.existsSync(stdExe))
+      program.error(
+        chalk.dim.bgRed("ERROR") + " 指定的 defaultStandard 不存在"
+      );
+    if (fs.statSync(stdExe).isDirectory())
+      program.error(
+        chalk.dim.bgRed("ERROR") + " defaultStandard 为目录而不是文件:" + stdExe
+      );
+  }
+
+  let genExe = "";
+  if (opts.generator) {
+    if (!fs.existsSync(opts.generator))
+      program.error(chalk.dim.bgRed("ERROR") + " 指定的 generator 不存在");
+    if (fs.statSync(opts.generator).isDirectory())
+      program.error(
+        chalk.dim.bgRed("ERROR") + " 指定的 generator 是目录而不是文件"
+      );
+    genExe = opts.generator;
+  } else {
+    genExe = getConfig(
+      "defaultGenerator",
+      true,
+      "--default-generator=<executable>"
+    );
+    if (!fs.existsSync(genExe))
+      program.error(
+        chalk.dim.bgRed("ERROR") + " 指定的 defaultGenerator 不存在"
+      );
+    if (fs.statSync(genExe).isDirectory())
+      program.error(
+        chalk.dim.bgRed("ERROR") +
+          " defaultGenerator 为目录而不是文件:" +
+          genExe
+      );
+  }
+
+  let l = 1,
+    r = 10;
+  if (typeof opts.left !== "undefined") {
+    l = Number(opts.left);
+    if (isNaN(l)) {
+      program.error(
+        chalk.dim.bgRed("ERROR") +
+          " 指定的检查点编号起始数不是合法数字:" +
+          opts.left
+      );
+    }
+  }
+  if (typeof opts.right !== "undefined") {
+    r = Number(opts.right);
+    if (isNaN(r)) {
+      program.error(
+        chalk.dim.bgRed("ERROR") +
+          " 指定的检查点编号结束数不是合法数字:" +
+          opts.right
+      );
+    }
+  }
+  if (l > r)
+    program.error(
+      chalk.dim.bgRed("ERROR") +
+        " 指定的检查点编号起始数大于结束数:" +
+        opts.left +
+        " > " +
+        opts.right
+    );
+
+  for (let i = l; i <= r; ++i) {
+    let inBuf = child_process.spawnSync(genExe, ["" + i]).stdout;
+    writeFileSync("TMP_IN", inBuf);
+    let stdAnsBuf = child_process.spawnSync(stdExe, { input: inBuf }).stdout;
+    stdAnsBuf = Buffer.from(
+      stdAnsBuf.toString().replace(/ *\n/g, "\n").replace(/\n$/, "")
+    );
+    writeFileSync("TMP_STD_OUT", stdAnsBuf);
+    let tarAnsBuf = child_process.spawnSync(target, { input: inBuf }).stdout;
+    tarAnsBuf = Buffer.from(
+      tarAnsBuf.toString().replace(/ *\n/g, "\n").replace(/\n$/, "")
+    );
+    writeFileSync("TMP_TAR_OUT", tarAnsBuf);
+
+    let result = child_process.spawnSync("fc", [
+      "TMP_TAR_OUT",
+      "TMP_STD_OUT",
+    ]).status;
+    console.log(
+      "Check Point",
+      result
+        ? chalk.bgRedBright.whiteBright("WA")
+        : chalk.bgGreenBright.whiteBright("AC"),
+      `(${i})`
+    );
+    if (result) {
+      console.log(
+        child_process
+          .spawnSync("diff", ["TMP_TAR_OUT", "TMP_STD_OUT"])
+          .stdout.toString()
+      );
+      console.log(
+        "请检查程序，输入为TMP_IN，待检测程序输出TMP_TAR_OUT，标准答案TMP_STD_OUT"
+      );
+      break;
+    }
+    if (i == r) {
+      rmSync("TMP_IN");
+      rmSync("TMP_TAR_OUT");
+      rmSync("TMP_STD_OUT");
+    }
   }
 }
 function copyOperation({ src, dest, error, force }) {
